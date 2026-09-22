@@ -1,3 +1,8 @@
+
+<img width="1298" height="785" alt="Screenshot 2026-09-22 095657" src="https://github.com/user-attachments/assets/9880e466-176e-4421-ac2d-a75665b877d1" />
+
+
+
 # AI Chat Handoff & Summarizer (Ollama)
 
 Chrome extension that:
