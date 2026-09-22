@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "AI Chat Handoff & Summarizer (Ollama)",
-  "version": "1.0.0",
-  "description": "Summarize the current AI chat locally with Ollama, build a handoff prompt for a new session/model, and export a clean PDF with clearly highlighted code blocks.",
+  "version": "2.0.0",
+  "description": "Capture AI conversations locally with Ollama, generate structured handoff briefs, and export clean PDFs.",
   "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage"],
   "host_permissions": [
     "http://localhost:11434/*",
     "http://127.0.0.1:11434/*",
     "https://claude.ai/*",
+    "https://gemini.google.com/*",
     "https://chatgpt.com/*",
     "https://chat.openai.com/*"
   ],
@@ -28,6 +29,7 @@
     {
       "matches": [
         "https://claude.ai/*",
+        "https://gemini.google.com/*",
         "https://chatgpt.com/*",
         "https://chat.openai.com/*"
       ],

@@ -55,11 +55,42 @@ async function callOllama(model, prompt) {
   );
 }
 
-async function summarizeWithOllama(model, conversationText) {
-  const prompt = `You are helping a user hand off an AI chat conversation to a new session (possibly with a different model). Read the conversation below and produce:
-1. A concise summary (5-10 bullet points) of what was discussed and decided.
-2. Any open tasks / unresolved questions.
-3. A short "handoff prompt" the user can paste into a brand new chat to continue seamlessly, written in second person ("We were working on...").
+async function summarizeWithOllama(model, conversationText, mode) {
+  const formats = {
+    structured: `Create a structured handoff brief with exactly these headings:
+CONTEXT
+GOAL
+CURRENT STATE
+KEY DECISIONS
+COMPLETED WORK
+OPEN QUESTIONS
+BLOCKERS OR RISKS
+NEXT ACTIONS
+CONTINUE PROMPT
+
+Use concise bullets. Preserve concrete file names, commands, errors, and constraints. Do not invent missing facts.`,
+    continue: `Create a continuation prompt for a new AI session. Start with a compact context summary, then state the current goal, completed work, unresolved issues, constraints, and the exact next action. Write it so another AI can continue immediately without asking for information already present.`,
+    debug: `Create a debugging brief with these headings:
+BUG
+EXPECTED BEHAVIOR
+OBSERVED BEHAVIOR
+REPRODUCTION DETAILS
+RELEVANT FILES AND CODE
+LIKELY ROOT CAUSE
+ATTEMPTS ALREADY MADE
+NEXT DIAGNOSTIC STEP
+
+Separate confirmed facts from hypotheses and preserve exact errors or commands when available.`
+  };
+  const format = formats[mode] || formats.structured;
+  const prompt = `You are preparing a reliable knowledge handoff from an AI chat to a new session or model.
+${format}
+
+Rules:
+- Base the output only on the conversation.
+- Do not mention that you are an AI or that you were given a transcript.
+- Keep useful technical details; remove greetings and repetition.
+- If a section has no evidence, write "None identified".
 
 Conversation:
 ---
@@ -71,7 +102,7 @@ ${conversationText.slice(0, 12000)}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "OLLAMA_SUMMARIZE") {
-    summarizeWithOllama(msg.model, msg.text)
+    summarizeWithOllama(msg.model, msg.text, msg.mode)
       .then((summary) => sendResponse({ ok: true, summary }))
       .catch((err) => sendResponse({ ok: false, error: String(err.message || err) }));
     return true; // keep the message channel open for the async response

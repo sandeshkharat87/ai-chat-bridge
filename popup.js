@@ -4,6 +4,7 @@ const copyBtn = document.getElementById("copyBtn");
 const summarizeBtn = document.getElementById("summarizeBtn");
 const exportBtn = document.getElementById("exportBtn");
 const modelInput = document.getElementById("model");
+const handoffMode = document.getElementById("handoffMode");
 
 function setStatus(text, isError) {
   statusEl.textContent = text || "";
@@ -66,6 +67,7 @@ summarizeBtn.addEventListener("click", async () => {
     const result = await chrome.runtime.sendMessage({
       type: "OLLAMA_SUMMARIZE",
       model: modelInput.value.trim() || "llama3",
+      mode: handoffMode.value,
       text: scrape.text,
     });
 
@@ -75,7 +77,7 @@ summarizeBtn.addEventListener("click", async () => {
 
     summaryBox.value = result.summary;
     copyBtn.disabled = false;
-    setStatus("Done. Edit the handoff prompt below if needed, then copy it.");
+    setStatus("Done. Edit the handoff brief below if needed, then copy it.");
   } catch (err) {
     setStatus(String(err.message || err), true);
   } finally {
