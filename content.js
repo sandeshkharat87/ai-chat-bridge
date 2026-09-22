@@ -153,10 +153,156 @@
     });
   }
 
+  function textOf(node) {
+    if (!node) return "";
+    const raw = node.innerText || node.textContent || "";
+    return raw.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function detectProvider() {
+    const host = (location && location.hostname || "").toLowerCase();
+    if (host.includes("gemini")) return "gemini";
+    if (host.includes("claude")) return "claude";
+    if (host.includes("chatgpt")) return "chatgpt";
+    const bodyText = (document.body && document.body.innerText || "").toLowerCase();
+    if (bodyText.includes("gemini")) return "gemini";
+    if (bodyText.includes("claude")) return "claude";
+    if (bodyText.includes("chatgpt")) return "chatgpt";
+    return "generic";
+  }
+
+  function isCandidateMessageNode(el) {
+    if (!el || el.nodeType !== 1) return false;
+    if (looksLikeChrome(el)) return false;
+    if (el.closest("nav, aside, header, footer, button, form, input, textarea, select, [role='navigation']")) return false;
+    const tag = (el.tagName || "").toLowerCase();
+    if (["script", "style", "svg", "img"].includes(tag)) return false;
+    const text = textOf(el);
+    if (text.length < 12) return false;
+    return true;
+  }
+
+  function elementTop(el) {
+    try {
+      const rect = el.getBoundingClientRect();
+      return rect && typeof rect.top === "number" ? rect.top : Number.MAX_SAFE_INTEGER;
+    } catch (_e) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+  }
+
+  function elementLeft(el) {
+    try {
+      const rect = el.getBoundingClientRect();
+      return rect && typeof rect.left === "number" ? rect.left : Number.MAX_SAFE_INTEGER;
+    } catch (_e) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+  }
+
+  function stripGeminiUi(node) {
+    node.querySelectorAll(
+      ".luminous-toggle-container, [data-test-id='luminous-expand-button'], [data-test-id='luminous-expand-pill'], " +
+      ".attachment-container, sequence, .sequence-container, .sequence-event, .sequence-event-content, " +
+      ".sequence-event-marker-container, .elicitations, .elicitations-container, button, svg, mat-icon, " +
+      ".code-block-decoration, .buttons, .download-button, .copy-button, [data-test-id='sequence-export-header']"
+    ).forEach((nodeToRemove) => nodeToRemove.remove());
+  }
+
+  function cloneGeminiTurn(source, role) {
+    const clone = source.cloneNode(true);
+    stripGeminiUi(clone);
+    const text = textOf(role === "user" ? clone.querySelector(".query-text") || clone : clone);
+    if (!text || text.length < 2) return null;
+    return { source, role, text, top: elementTop(source), clone };
+  }
+
+  function dedupeTurns(turns) {
+    const seenNodes = new Set();
+    const seenPositions = new Map();
+    return turns.filter((turn) => {
+      if (seenNodes.has(turn.source)) return false;
+      seenNodes.add(turn.source);
+      const key = `${turn.role}:${turn.text}`;
+      const priorTop = seenPositions.get(key);
+      if (priorTop !== undefined && Math.abs(priorTop - turn.top) < 8) return false;
+      seenPositions.set(key, turn.top);
+      return true;
+    });
+  }
+
+  function getGeminiTurns(root) {
+    const turns = [];
+    root.querySelectorAll('[data-test-id="luminous-collapsed-bubble"]').forEach((node) => {
+      const turn = cloneGeminiTurn(node, "user");
+      if (turn) turns.push(turn);
+    });
+    root.querySelectorAll('.markdown.markdown-main-panel').forEach((node) => {
+      const turn = cloneGeminiTurn(node, "assistant");
+      if (turn) turns.push(turn);
+    });
+    return dedupeTurns(turns).sort((a, b) => {
+      const topDiff = a.top - b.top;
+      if (Math.abs(topDiff) > 2) return topDiff;
+      return elementLeft(a.source) - elementLeft(b.source);
+    });
+  }
+
+  function getClaudeMessageBlocks(root) {
+    const selectors = [
+      '[data-testid*="message"]',
+      '[data-message-author-role]',
+      '.message',
+      '.assistant-message',
+      '.user-message',
+      '[class*="conversation-turn"]',
+      'article',
+      'div[data-is-user]'
+    ];
+
+    const nodes = [];
+    for (const selector of selectors) {
+      root.querySelectorAll(selector).forEach((el) => {
+        if (isCandidateMessageNode(el)) nodes.push(el);
+      });
+    }
+
+    const unique = [];
+    const seen = new Set();
+    for (const node of nodes) {
+      if (seen.has(node)) continue;
+      if (unique.some((other) => other !== node && other.contains(node))) continue;
+      seen.add(node);
+      unique.push(node);
+    }
+    return unique.sort((a, b) => elementTop(a) - elementTop(b));
+  }
+
+  function getMessageBlocks(root) {
+    const provider = detectProvider();
+    if (provider === "gemini") return getGeminiTurns(root).map((turn) => turn.source);
+    if (provider === "claude") return getClaudeMessageBlocks(root);
+
+    const fallback = Array.from(root.querySelectorAll("p, li, div, article, section, pre"))
+      .filter(isCandidateMessageNode);
+    return dedupeNodes(fallback).sort((a, b) => elementTop(a) - elementTop(b));
+  }
+
   function extractPlainText(container) {
-    // Used for the Ollama summarization prompt. innerText respects
-    // visual line breaks and is good enough for a summary.
-    return container.innerText.replace(/\n{3,}/g, "\n\n").trim();
+    if (detectProvider() === "gemini") {
+      return getGeminiTurns(container).map((turn) => `${turn.role === "user" ? "User" : "AI"}:\n${turn.text}`).join("\n\n");
+    }
+    const blocks = getMessageBlocks(container);
+    if (!blocks.length) {
+      return (container.innerText || container.textContent || "").replace(/\n{3,}/g, "\n\n").trim();
+    }
+
+    return blocks
+      .map((block) => textOf(block))
+      .filter(Boolean)
+      .join("\n\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   }
 
   // Builds the pieces needed for the export page (title/meta/body HTML).
@@ -166,39 +312,68 @@
   // cause of the blank PDF page). Instead we hand this payload back to
   // popup.js, which opens the export tab itself via chrome.tabs.create —
   // a privileged extension API call that isn't subject to popup blocking.
-  async function buildExportPayload(container, pageTitle) {
-    const clone = container.cloneNode(true);
+  function inferProviderName() {
+    const provider = detectProvider();
+    if (provider === "gemini") return "Gemini";
+    if (provider === "claude") return "Claude";
+    if (provider === "chatgpt") return "ChatGPT";
+    return "AI";
+  }
 
-    clone.querySelectorAll("script, style, iframe, button, textarea, input").forEach((el) => el.remove());
+  function prepareCodeBlocks(root) {
+    root.querySelectorAll("pre, code, samp, kbd").forEach((el) => {
+      el.style.background = "#111827";
+      el.style.color = "#f8fafc";
+      el.style.setProperty("print-color-adjust", "exact");
+      el.style.setProperty("-webkit-print-color-adjust", "exact");
+      if (el.tagName === "PRE") {
+        el.classList.add("handoff-code-block");
+        el.style.border = "1px solid #1f2937";
+        el.style.padding = "14px 16px";
+        el.style.whiteSpace = "pre-wrap";
+        el.style.wordBreak = "break-word";
+      }
+    });
+  }
 
-    const originalImgs = Array.from(container.querySelectorAll("img"));
+  async function cloneForExport(source) {
+    const clone = source.cloneNode(true);
+    clone.querySelectorAll("script, style, iframe, button, textarea, input, svg, mat-icon").forEach((el) => el.remove());
+    const originalImgs = Array.from(source.querySelectorAll("img"));
     const cloneImgs = Array.from(clone.querySelectorAll("img"));
     for (let i = 0; i < cloneImgs.length; i++) {
       const src = originalImgs[i] ? await imgToDataURL(originalImgs[i]) : null;
       if (src) cloneImgs[i].setAttribute("src", src);
       cloneImgs[i].style.maxWidth = "100%";
     }
+    prepareCodeBlocks(clone);
+    return clone;
+  }
 
-    clone.querySelectorAll("pre").forEach((pre) => {
-      pre.classList.add("handoff-code-block");
-      const codeEl = pre.querySelector("code");
-      let lang = "";
-      if (codeEl) {
-        const m = (codeEl.className || "").match(/language-([a-zA-Z0-9+#]+)/);
-        if (m) lang = m[1];
+  async function buildExportPayload(container, pageTitle) {
+    const provider = inferProviderName();
+    let bodyHtml;
+
+    if (detectProvider() === "gemini") {
+      const turns = getGeminiTurns(container);
+      const rows = [];
+      for (const turn of turns) {
+        const bubble = await cloneForExport(turn.source);
+        bubble.querySelectorAll(".query-text").forEach((el) => {
+          el.querySelectorAll("h5.screen-reader-user-query-label").forEach((label) => label.remove());
+        });
+        rows.push(`<article class="handoff-chat-row ${turn.role === "user" ? "is-user" : "is-ai"}"><div class="handoff-chat-bubble"><div class="handoff-speaker">${turn.role === "user" ? "User" : "AI"}</div>${bubble.innerHTML}</div></article>`);
       }
-      if (lang) {
-        const label = document.createElement("div");
-        label.className = "handoff-code-lang";
-        label.textContent = lang;
-        pre.prepend(label);
-      }
-    });
+      bodyHtml = rows.join("\n");
+    } else {
+      const clone = await cloneForExport(container);
+      bodyHtml = clone.innerHTML;
+    }
 
     return {
       title: pageTitle,
-      metaLine: `Exported ${new Date().toLocaleString()} — ${location.href}`,
-      bodyHtml: clone.innerHTML,
+      metaLine: `Provider: ${provider} — Exported ${new Date().toLocaleString()} — ${location.href}`,
+      bodyHtml,
     };
   }
 

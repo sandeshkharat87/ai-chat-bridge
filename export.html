@@ -8,10 +8,27 @@
     h1.handoff-title { font-size: 20px; margin-bottom: 4px; }
     .handoff-meta { color:#666; font-size: 12px; margin-bottom: 24px; }
     .handoff-loading { color:#888; font-size: 13px; }
+    .handoff-chat-row { display:flex; width:100%; margin:14px 0; page-break-inside:avoid; }
+    .handoff-chat-row.is-ai { justify-content:flex-start; }
+    .handoff-chat-row.is-user { justify-content:flex-end; }
+    .handoff-chat-bubble { width:min(78%, 700px); padding:12px 14px; border-radius:12px; border:1px solid #d9dce2; overflow-wrap:anywhere; }
+    .handoff-chat-row.is-ai .handoff-chat-bubble { background:#f5f7fa; }
+    .handoff-chat-row.is-user .handoff-chat-bubble { background:#e8f1ff; }
+    .handoff-speaker { color:#5d6572; font-size:11px; font-weight:700; margin-bottom:6px; text-transform:uppercase; }
+    .handoff-chat-bubble > *:first-child { margin-top:0; }
+    .handoff-chat-bubble > *:last-child { margin-bottom:0; }
     img { max-width: 100%; border-radius: 6px; margin: 8px 0; }
+    .handoff-chat-bubble pre,
+    .handoff-chat-bubble code,
+    .handoff-chat-bubble samp,
+    .handoff-chat-bubble kbd,
     pre.handoff-code-block {
-      background: #1e1e2e;
-      color: #e6e6e6;
+      background: #111827 !important;
+      color: #f8fafc !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    pre.handoff-code-block {
       padding: 14px 16px;
       border-radius: 8px;
       overflow-x: auto;
@@ -20,11 +37,11 @@
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
       font-size: 12.5px;
       line-height: 1.5;
-      border: 1px solid #333;
+      border: 1px solid #1f2937;
       margin: 10px 0 18px 0;
       page-break-inside: avoid;
     }
-    pre.handoff-code-block code { background: none; padding: 0; color: inherit; }
+    pre.handoff-code-block code { background: transparent !important; padding: 0; color: inherit !important; }
     .handoff-code-lang {
       font-size: 10px;
       text-transform: uppercase;
@@ -52,6 +69,7 @@
       #printBar { display: none; }
       body { margin: 0 16px; }
       pre.handoff-code-block { break-inside: avoid; }
+      .handoff-chat-bubble { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
