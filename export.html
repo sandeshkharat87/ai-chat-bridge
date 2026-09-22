@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Conversation export</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#1a1a1a; max-width: 860px; margin: 24px auto; line-height: 1.5; }
+    h1.handoff-title { font-size: 20px; margin-bottom: 4px; }
+    .handoff-meta { color:#666; font-size: 12px; margin-bottom: 24px; }
+    .handoff-loading { color:#888; font-size: 13px; }
+    img { max-width: 100%; border-radius: 6px; margin: 8px 0; }
+    pre.handoff-code-block {
+      background: #1e1e2e;
+      color: #e6e6e6;
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 12.5px;
+      line-height: 1.5;
+      border: 1px solid #333;
+      margin: 10px 0 18px 0;
+      page-break-inside: avoid;
+    }
+    pre.handoff-code-block code { background: none; padding: 0; color: inherit; }
+    .handoff-code-lang {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9aa0b4;
+      margin-bottom: 6px;
+      font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    code:not(pre code) {
+      background: #f0f0f4;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9em;
+    }
+    #printBar {
+      position: sticky; top: 0; background: #fff; padding: 8px 0;
+      border-bottom: 1px solid #eee; margin-bottom: 16px;
+    }
+    #printBar button {
+      font-size: 12.5px; padding: 6px 12px; border-radius: 6px;
+      border: 1px solid #d8d8dc; background: #f4f4f6; cursor: pointer;
+    }
+    @media print {
+      #printBar { display: none; }
+      body { margin: 0 16px; }
+      pre.handoff-code-block { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div id="printBar"><button id="printNowBtn">Print / Save as PDF</button></div>
+  <h1 class="handoff-title" id="title">Conversation export</h1>
+  <div class="handoff-meta" id="meta"></div>
+  <div id="content" class="handoff-loading">Loading conversation…</div>
+  <script src="export.js"></script>
+</body>
+</html>

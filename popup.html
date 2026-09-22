@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Chat Handoff & Summarizer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>Chat Handoff <span class="pill">Ollama · local</span></h1>
+
+  <label class="field">
+    <span>Ollama model</span>
+    <input id="model" type="text" value="llama3" spellcheck="false" />
+  </label>
+
+  <div class="row">
+    <button id="summarizeBtn" class="primary">Summarize with Ollama</button>
+    <button id="exportBtn" class="secondary">Export PDF</button>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <label class="field">
+    <span>Summary / handoff prompt</span>
+    <textarea id="summaryBox" rows="10" placeholder="Click 'Summarize with Ollama' to generate a handoff prompt you can paste into a new session or model..."></textarea>
+  </label>
+
+  <div class="row">
+    <button id="copyBtn" class="secondary" disabled>Copy handoff prompt</button>
+  </div>
+
+  <p class="hint">
+    Export PDF opens a clean, printable copy of the full conversation in a new tab
+    (auto-scrolled to load everything) with code blocks clearly highlighted, then
+    opens the browser's print dialog — choose "Save as PDF".
+  </p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
